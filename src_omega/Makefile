@@ -3,7 +3,20 @@ CC = g++
 DEBUG = -g
 CFLAGS = -Wall -c $(DEBUG)
 LFLAGS = -Wall $(DEBUG)
-LIBRARIES = Rpcrt4
+
+ifeq ($(OS),Windows_NT)
+	detected_OS := Windows
+else
+	detected_OS := $(shell uname -s)
+endif
+
+ifeq ($(detected_OS),Windows)
+	LIBRARIES = Rpcrt4
+	TODELETE = *.o OmegaMain.exe *.txt
+else
+	LIBRARIES = 
+	TODELETE = *.o *~ OmegaMain *.txt
+endif
 
 OmegaMain : $(OBJS)
 	$(CC) $(LFLAGS) $(OBJS) -l$(LIBRARIES) -o OmegaMain
@@ -16,4 +29,4 @@ Logger.o : Logger.h Logger.cpp
 	$(CC) $(CFLAGS) Logger.cpp
 
 clean:
-	\rm *.o *.exe *~ OmegaMain
+	\rm $(TODELETE)
