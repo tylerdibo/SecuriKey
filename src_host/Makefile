@@ -1,4 +1,4 @@
-OBJS = OmegaMain.o ../logger/Logger.o
+OBJS = HostMain.o ../logger/Logger.o
 CC = g++
 DEBUG = -g
 CFLAGS = -Wall -c $(DEBUG)
@@ -13,17 +13,17 @@ endif
 
 ifeq ($(detected_OS),Windows)
 	LIBRARIES = Rpcrt4
-	TODELETE = *.o OmegaMain.exe *.txt
+	TODELETE = *.o HostMain.exe *.txt
 else
 	LIBRARIES = 
-	TODELETE = *.o *~ OmegaMain *.txt
+	TODELETE = *.o *~ HostMain *.txt
 endif
 
-OmegaMain : $(OBJS)
-	$(CC) $(LFLAGS) $(OBJS) -l$(LIBRARIES) -o OmegaMain
+HostMain : $(OBJS)
+	$(CC) $(LFLAGS) $(OBJS) -l$(LIBRARIES) -o HostMain
 
-OmegaMain.o : OmegaMain.cpp
-	$(CC) $(CFLAGS) -I$(INCLUDES) -DLOGGING_LEVEL=3 OmegaMain.cpp
+HostMain.o : HostMain.cpp
+	$(CC) $(CFLAGS) -I$(INCLUDES) -DLOGGING_LEVEL=3 HostMain.cpp
 	#TODO: make LOGGING_LEVEL able to be modified when compiling
 
 clean:

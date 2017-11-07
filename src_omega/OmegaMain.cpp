@@ -77,7 +77,7 @@ std::string newUUID(){ //credit to: https://stackoverflow.com/questions/543306/p
 }
 
 int main(const int argc, const char* const argv[]){
-	Logger logg("test_log.txt", LOGGING_LEVEL); //Initialize log file
+	Logger logg("omega_log.txt", LOGGING_LEVEL); //Initialize log file
 	logg.info("Main", "Program Started");
 	
 	if(argc < 2){
