@@ -64,6 +64,7 @@ int main(const int argc, const char* const argv[]){
 		//save to disk
 		writeUUID("UUID", uuid);
 	}
+	logg.debug("Main", "UUID is " + uuid);
 	//sendUUIDToOmega();
 	
 	ssh_session test_ssh_session = ssh_new();
