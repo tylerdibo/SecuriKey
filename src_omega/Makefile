@@ -12,15 +12,15 @@ else
 endif
 
 ifeq ($(detected_OS),Windows)
-	LIBRARIES = Rpcrt4
+	LIBRARIES = 
 	TODELETE = *.o ../bin/OmegaMain.exe *.txt
 else
-	LIBRARIES = uuid
+	LIBRARIES = 
 	TODELETE = *.o *~ ../bin/OmegaMain *.txt
 endif
 
 OmegaMain : $(OBJS)
-	$(CC) $(LFLAGS) $(OBJS) -l$(LIBRARIES) -o ../bin/OmegaMain
+	$(CC) $(LFLAGS) $(OBJS) $(LIBRARIES) -o ../bin/OmegaMain
 
 OmegaMain.o : OmegaMain.cpp
 	$(CC) $(CFLAGS) -I$(INCLUDES) -DLOGGING_LEVEL=$(LOGLVL) OmegaMain.cpp

@@ -2,11 +2,6 @@
 #include "Logger.h"
 
 using namespace std;
-#ifdef WIN32
-#include <Rpc.h>
-#else
-#include <uuid/uuid.h>
-#endif
 
 bool checkMACAddress(const char* currMAC){
 	const char* letterMAC = currMAC;

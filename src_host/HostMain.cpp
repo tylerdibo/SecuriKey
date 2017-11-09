@@ -1,9 +1,14 @@
 #include <iostream>
-#include <uuid/uuid.h>
 #include <fstream>
 #include "Logger.h"
 #define LIBSSH_STATIC 1
 #include "libssh/libssh.h"
+
+#ifdef WIN32
+#include <Rpc.h>
+#else
+#include <uuid/uuid.h>
+#endif
 
 using namespace std;
 
