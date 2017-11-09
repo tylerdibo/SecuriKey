@@ -16,7 +16,7 @@ ifeq ($(detected_OS),Windows)
 	LIBRARIES = -lRpcrt4 -lssh
 	TODELETE = *.o ../bin/HostMain.exe *.txt
 else
-	LIBRARIES = 
+	LIBRARIES = -luuid -lssh
 	TODELETE = *.o *~ ../bin/HostMain *.txt
 endif
 

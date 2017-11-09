@@ -15,7 +15,7 @@ ifeq ($(detected_OS),Windows)
 	LIBRARIES = Rpcrt4
 	TODELETE = *.o ../bin/OmegaMain.exe *.txt
 else
-	LIBRARIES = 
+	LIBRARIES = uuid
 	TODELETE = *.o *~ ../bin/OmegaMain *.txt
 endif
 

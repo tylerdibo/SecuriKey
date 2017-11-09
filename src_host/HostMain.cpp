@@ -1,4 +1,5 @@
 #include <iostream>
+#include <uuid/uuid.h>
 #include <fstream>
 #include "Logger.h"
 #define LIBSSH_STATIC 1

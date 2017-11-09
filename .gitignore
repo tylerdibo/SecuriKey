@@ -1,5 +1,7 @@
 *.exe
 *.txt
 *.o
+bin/HostMain
+bin/OmegaMain
 test.cpp
 UUID
