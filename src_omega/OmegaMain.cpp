@@ -2,11 +2,6 @@
 #include "Logger.h"
 
 using namespace std;
-#ifdef WIN32
-#include <Rpc.h>
-#else
-#include <uuid/uuid.h>
-#endif
 
 bool checkMACAddress(const char* currMAC){
 	const char* letterMAC = currMAC;
@@ -54,26 +49,6 @@ bool checkMACAddress(const char* currMAC){
 	delete[] lineArray;
 	
 	return foundMatch;
-}
-
-std::string newUUID(){ //credit to: https://stackoverflow.com/questions/543306/platform-independent-guid-generation-in-c
-#ifdef WIN32
-    UUID uuid;
-    UuidCreate(&uuid);
-
-    unsigned char* str;
-    UuidToStringA(&uuid, &str);
-
-    std::string uuidStr((char*)str);
-
-    RpcStringFreeA ( &str );
-#else
-    uuid_t uuid;
-    uuid_generate_random ( uuid );
-    char s[37];
-    uuid_unparse ( uuid, s );
-#endif
-    return uuidStr;
 }
 
 int main(const int argc, const char* const argv[]){

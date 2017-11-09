@@ -12,18 +12,18 @@ else
 endif
 
 ifeq ($(detected_OS),Windows)
-	LIBRARIES = Rpcrt4
-	TODELETE = *.o OmegaMain.exe *.txt
+	LIBRARIES = 
+	TODELETE = *.o ../bin/OmegaMain.exe *.txt
 else
 	LIBRARIES = 
-	TODELETE = *.o *~ OmegaMain *.txt
+	TODELETE = *.o *~ ../bin/OmegaMain *.txt
 endif
 
 OmegaMain : $(OBJS)
-	$(CC) $(LFLAGS) $(OBJS) -l$(LIBRARIES) -o OmegaMain
+	$(CC) $(LFLAGS) $(OBJS) $(LIBRARIES) -o ../bin/OmegaMain
 
 OmegaMain.o : OmegaMain.cpp
-	$(CC) $(CFLAGS) -I$(INCLUDES) -DLOGGING_LEVEL=3 OmegaMain.cpp
+	$(CC) $(CFLAGS) -I$(INCLUDES) -DLOGGING_LEVEL=$(LOGLVL) OmegaMain.cpp
 	#TODO: make LOGGING_LEVEL able to be modified when compiling
 
 clean:

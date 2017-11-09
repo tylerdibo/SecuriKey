@@ -3,7 +3,8 @@ CC = g++
 DEBUG = -g
 CFLAGS = -Wall -c $(DEBUG)
 LFLAGS = -Wall $(DEBUG)
-INCLUDES = ../logger
+INCLUDES = -I../logger -I../inc
+LIB_PATHS = -L../lib
 
 ifeq ($(OS),Windows_NT)
 	detected_OS := Windows
@@ -12,19 +13,18 @@ else
 endif
 
 ifeq ($(detected_OS),Windows)
-	LIBRARIES = Rpcrt4
-	TODELETE = *.o HostMain.exe *.txt
+	LIBRARIES = -lRpcrt4 -lssh
+	TODELETE = *.o ../bin/HostMain.exe *.txt
 else
-	LIBRARIES = 
-	TODELETE = *.o *~ HostMain *.txt
+	LIBRARIES = -luuid -lssh
+	TODELETE = *.o *~ ../bin/HostMain *.txt
 endif
 
 HostMain : $(OBJS)
-	$(CC) $(LFLAGS) $(OBJS) -l$(LIBRARIES) -o HostMain
+	$(CC) $(LFLAGS) $(OBJS) $(LIB_PATHS) $(LIBRARIES) -o ../bin/HostMain
 
 HostMain.o : HostMain.cpp
-	$(CC) $(CFLAGS) -I$(INCLUDES) -DLOGGING_LEVEL=3 HostMain.cpp
-	#TODO: make LOGGING_LEVEL able to be modified when compiling
+	$(CC) $(CFLAGS) $(INCLUDES) -DLOGGING_LEVEL=$(LOGLVL) HostMain.cpp
 
 clean:
 	\rm $(TODELETE)
