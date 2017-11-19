@@ -1,6 +1,4 @@
-ifndef LOGLVL
-$(error LOGLVL is not set)
-endif
+export LOGLVL = 2
 
 all:
 	+$(MAKE) -C logger

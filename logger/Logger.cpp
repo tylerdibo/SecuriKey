@@ -24,7 +24,7 @@ string Logger::get_current_timestamp(){
 
 bool Logger::error(string tag, string message){
 	if(log_level >= LEVEL_ERROR){
-		cout << get_current_timestamp() << ": ERROR: " << tag << ": " << message << endl;
+		cerr << get_current_timestamp() << ": ERROR: " << tag << ": " << message << endl;
 	}
 	log_stream << get_current_timestamp() << ": ERROR: " << tag << ": " << message << endl;
 	return (log_stream.bad());
