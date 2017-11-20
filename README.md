@@ -6,14 +6,19 @@ A project that uses the Omega2 to provide a means with which users can access th
 ### Linux / OS X
  * libssh-dev
  * uuid-dev
+ * [LEDE build system](https://docs.onion.io/omega2-docs/cross-compiling.html) (For cross-compilation)
 ### Windows
  * libssh
 
 ## Installing
 
 ``` bash
-# build source
-make LOGLVL={1,2,3,4}
+# build host source
+make [LOGLVL={1,2,3,4}]
+
+# cross compile for omega2
+cd src_omega
+sh xCompile.sh -buildroot <PATH TO BUILD SYSTEM>
 ```
 
 ``` bash
