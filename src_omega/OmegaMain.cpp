@@ -1,4 +1,6 @@
 #include <iostream>
+#include <fstream>
+#include <vector>
 #include "Logger.h"
 
 using namespace std;
@@ -49,6 +51,60 @@ bool checkMACAddress(const char* currMAC){
 	delete[] lineArray;
 	
 	return foundMatch;
+}
+
+string encryptDecrypt(string toEncrypt) {
+    char key[6] = {'K', 'C', 'Q', 2, 'e', '+'};
+    string output = toEncrypt;
+    
+    for (int i = 0; i < toEncrypt.size(); i++)
+        output[i] = toEncrypt[i] ^ key[i % (sizeof(key) / sizeof(char))];
+    
+    return output;
+}
+
+bool encrypt(string filename){
+    ifstream in(filename);
+
+    vector<string> userString;
+    string str;
+    string encrypted;
+    while (getline(in, str)){
+        encrypted = encryptDecrypt(str);
+        userString.push_back(encrypted);
+    }
+
+    ofstream out(filename);
+    for(int i=0; i < userString.size(); i++){
+       out << userString[i] << endl;
+    }
+
+    in.close();
+    out.close();
+
+    return 0;
+}
+
+bool decrypt(string filename){
+    ifstream in(filename);
+
+    vector<string> userString;
+    string str;
+    string encrypted;
+    while (getline(in, str)){
+        encrypted = encryptDecrypt(str);
+        userString.push_back(encrypted);
+    }
+
+    ofstream out(filename);
+    for(int i=0; i < userString.size(); i++){
+       out << userString[i] << endl;
+    }
+
+    in.close();
+    out.close();
+
+    return 0;
 }
 
 int main(const int argc, const char* const argv[]){
