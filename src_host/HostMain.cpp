@@ -60,6 +60,10 @@ string readUUID(const char* filename){
 	return line;
 }
 
+bool connectSerial(){
+	return false;
+}
+
 bool sshVerifyOmega(ssh_session omega_sess){
 	//Check if omega is in known hosts
 	int state = ssh_is_server_known(omega_sess);
@@ -116,6 +120,7 @@ int main(const int argc, const char* const argv[]){
 	logg.debug("Main", "UUID is " + uuid);
 	//sendUUIDToOmega();
 	
+	//Initialize SSH session with omega
 	ssh_session omega_ssh = ssh_new();
 	int rc;
 	if(omega_ssh == NULL){
@@ -124,23 +129,76 @@ int main(const int argc, const char* const argv[]){
 	
 	int verbosity = SSH_LOG_PACKET;
 	int port = 22;
-	ssh_options_set(omega_ssh, SSH_OPTIONS_HOST, "192.168.7.2");
+	ssh_options_set(omega_ssh, SSH_OPTIONS_HOST, "omega-ABCD.local");
 	ssh_options_set(omega_ssh, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
 	ssh_options_set(omega_ssh, SSH_OPTIONS_PORT, &port);
 	
 	rc = ssh_connect(omega_ssh);
 	if(rc != SSH_OK){
-		logg.error("Main", "Could not connect to omega. Exiting...");
-		return -1;
+		logg.warning("Main", "Could not connect to omega wirelessly. Attempting serial connection.");
+		if(!connectSerial()){
+			logg.error("Main", "Could not connet to omega through serial. Exiting...");
+			return -1;
+		}
 	}
 	
 	if(!sshVerifyOmega(omega_ssh)){
-		//Error message logged in above function
+		//Error message logged in sshVerifyOmega() function
+		return -1;
+	}
+	
+	
+	//Initialize SSH channel
+	ssh_channel channel = ssh_channel_new(omega_ssh);
+	if(channel == NULL){
+		logg.error("Main", "Could not open SSH channel. Exiting...");
+		return -1;
+	}
+	
+	if(ssh_channel_open_session(channel) != SSH_OK){
+		ssh_channel_free(channel);
+		logg.error("Main", "Could not open SSH session. Exiting...");
+		return -1;
+	}
+	
+	//Initialize shell
+	rc = ssh_channel_request_pty(channel); //Not needed for non-interactive shell
+	if (rc != SSH_OK){
+		logg.error("Main", "Error opening remote shell [0]. Exiting...");
+		return -1;
+	}
+	rc = ssh_channel_change_pty_size(channel, 80, 24);
+	if (rc != SSH_OK){
+		logg.error("Main", "Error opening remote shell [1]. Exiting...");
+		return -1;
+	}
+	rc = ssh_channel_request_shell(channel);
+	if (rc != SSH_OK){
+		logg.error("Main", "Error opening remote shell [2]. Exiting...");
 		return -1;
 	}
 	
 	//MAIN LOOP HERE
+	int bufSize = 256;
+	char buffer[bufSize];
+	int nBytesRead;
+	while(ssh_channel_is_open(channel) && !ssh_channel_is_eof(channel)){
+		nBytesRead = ssh_channel_read_timeout(channel, buffer, bufSize, 0, -1);
+		if(nBytesRead < 0){
+			logg.error("Main", "Error reading bytes from ssh. Exiting...");
+			return -1;
+		}
+		if(nBytesRead > 0){
+			//Display to terminal
+			write(1, buffer, nBytesRead);
+			logg.debug("SSH Read", buffer);
+		}
+	}
 	
+	//Closing connections and freeing memory
+	ssh_channel_close(channel);
+	ssh_channel_send_eof(channel);
+	ssh_channel_free(channel);
 	
 	ssh_disconnect(omega_ssh);
 	ssh_free(omega_ssh);
