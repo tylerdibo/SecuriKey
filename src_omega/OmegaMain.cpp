@@ -145,9 +145,15 @@ int main(const int argc, const char* const argv[]){
 		logg.debug("Main", "Command entered: " + command);
 		
 		if(command == "request"){
-			
+			// decrypt file
+			// search for line that starts with website
+			// find user/pass combination
+			// send credentials to hostMain
+			// encrypt file
 		}else if(command == "add"){
-			
+			// decrypt file
+			// append credentials in the form of "user pass" to end of file
+			// encrypt file
 		}else if(command == "getsettings"){
 			
 		}else if(command == "setsettings"){
