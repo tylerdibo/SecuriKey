@@ -1,6 +1,9 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <string>
+#include <string.h>
+#include <tuple>
 #include "Logger.h"
 
 using namespace std;
@@ -107,6 +110,41 @@ bool decrypt(string filename){
     return 0;
 }
 
+vector<string> split(string str, string sep){
+    char* cstr = const_cast<char*>(str.c_str());	// const_cast used as c_str() returns const char*
+    char* currentStr;
+    vector<string> arr;
+    currentStr = strtok(cstr, sep.c_str());
+
+    while(currentStr != NULL){
+        arr.push_back(currentStr);
+        currentStr = strtok(NULL, sep.c_str());  // passing NULL lets strtok know that you are tokenizing same string
+    }
+
+    return arr;
+}
+
+tuple<string, string, bool> search(string filename, string website){
+  ifstream in(filename);
+  vector<string> listFilesMax;
+  string str = "";
+  string user = "";
+  string pass = "";
+  bool err = true;
+
+  while (getline(in, str)){
+    listFilesMax = split(str, " ");
+    if (listFilesMax[0] == website){
+      user = listFilesMax[1];
+      pass = listFilesMax[2];
+      err = false;
+      break;
+    }
+  }
+
+  return make_tuple(user, pass, err);
+}
+
 int main(const int argc, const char* const argv[]){
 	Logger logg("omega_log.txt", LOGGING_LEVEL); //Initialize log file
 	logg.info("Main", "Program Started");
@@ -138,6 +176,9 @@ int main(const int argc, const char* const argv[]){
 		//Get input, then process, and execute command
 		string inputStr;
 		getline(cin, inputStr);
+
+		string filename = "9d0bnLHA7HWB.txt";
+		string website = "github.com";
 		
 		size_t spaceIndex = inputStr.find_first_of(" ");
 		string command = inputStr.substr(0, spaceIndex);
@@ -145,15 +186,23 @@ int main(const int argc, const char* const argv[]){
 		logg.debug("Main", "Command entered: " + command);
 		
 		if(command == "request"){
-			// decrypt file
-			// search for line that starts with website
-			// find user/pass combination
-			// send credentials to hostMain
-			// encrypt file
+		  string user = "";
+		  string pass = "";
+		  bool err = true;
+
+		  decrypt(filename);
+		  tie(user, pass, err) = search(filename, website);
+
+		  if (!err){
+		  	// send credentials to hostMain
+		  }
+
+		  encrypt(filename);
+
 		}else if(command == "add"){
-			// decrypt file
-			// append credentials in the form of "user pass" to end of file
-			// encrypt file
+			decrypt(filename);
+			// append credentials in the form of "url user pass" to end of file
+			encrypt(filename);
 		}else if(command == "getsettings"){
 			
 		}else if(command == "setsettings"){
