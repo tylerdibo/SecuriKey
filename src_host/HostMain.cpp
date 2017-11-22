@@ -95,6 +95,7 @@ bool sshVerifyOmega(ssh_session omega_sess){
 				logg.error("SSH Verification", "Writing to known hosts file failed. Exiting...");
 				return false;
 			}
+			logg.info("SSH Verification", "New server registered");
 			break;
 		case SSH_SERVER_ERROR:
 			logg.error("SSH Verification", "Unknown Error");
@@ -106,6 +107,12 @@ bool sshVerifyOmega(ssh_session omega_sess){
 }
 
 int main(const int argc, const char* const argv[]){
+	cout << "   _____                      _ __ __          \n" <<
+			"  / ___/___  _______  _______(_) //_/__  __  __\n" <<
+			"  \\__ \\/ _ \\/ ___/ / / / ___/ / ,< / _ \\/ / / /\n" <<
+			" ___/ /  __/ /__/ /_/ / /  / / /| /  __/ /_/ / \n" <<
+			"/____/\\___/\\___/\\__,_/_/  /_/_/ |_\\___/\\__, /  \n" <<
+			"                                      /____/" << endl;
 	
 	logg.info("Main", "Program Started");
 	
@@ -129,7 +136,7 @@ int main(const int argc, const char* const argv[]){
 	
 	int verbosity = SSH_LOG_PACKET;
 	int port = 22;
-	ssh_options_set(omega_ssh, SSH_OPTIONS_HOST, "omega-ABCD.local");
+	ssh_options_set(omega_ssh, SSH_OPTIONS_HOST, "omega-A030.local");
 	ssh_options_set(omega_ssh, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
 	ssh_options_set(omega_ssh, SSH_OPTIONS_PORT, &port);
 	
@@ -142,11 +149,22 @@ int main(const int argc, const char* const argv[]){
 		}
 	}
 	
+	//Authenticate omega
 	if(!sshVerifyOmega(omega_ssh)){
 		//Error message logged in sshVerifyOmega() function
+		ssh_disconnect(omega_ssh);
+		ssh_free(omega_ssh);
 		return -1;
 	}
 	
+	//Authenticate host
+	rc = ssh_userauth_password(omega_ssh, "root", "onioneer"); //Change to custom user account
+	if(rc != SSH_AUTH_SUCCESS){
+		logg.error("Main", "Error authenticating with password. Exiting...");
+		ssh_disconnect(omega_ssh);
+		ssh_free(omega_ssh);
+		return -1;
+	}
 	
 	//Initialize SSH channel
 	ssh_channel channel = ssh_channel_new(omega_ssh);
@@ -155,7 +173,9 @@ int main(const int argc, const char* const argv[]){
 		return -1;
 	}
 	
-	if(ssh_channel_open_session(channel) != SSH_OK){
+	rc = ssh_channel_open_session(channel);
+	if(rc != SSH_OK){
+		//cerr << ssh_get_error(omega_ssh);
 		ssh_channel_free(channel);
 		logg.error("Main", "Could not open SSH session. Exiting...");
 		return -1;
@@ -163,7 +183,7 @@ int main(const int argc, const char* const argv[]){
 	
 	//Initialize shell
 	rc = ssh_channel_request_pty(channel); //Not needed for non-interactive shell
-	if (rc != SSH_OK){
+	/*if (rc != SSH_OK){
 		logg.error("Main", "Error opening remote shell [0]. Exiting...");
 		return -1;
 	}
@@ -171,7 +191,7 @@ int main(const int argc, const char* const argv[]){
 	if (rc != SSH_OK){
 		logg.error("Main", "Error opening remote shell [1]. Exiting...");
 		return -1;
-	}
+	}*/
 	rc = ssh_channel_request_shell(channel);
 	if (rc != SSH_OK){
 		logg.error("Main", "Error opening remote shell [2]. Exiting...");
@@ -179,9 +199,10 @@ int main(const int argc, const char* const argv[]){
 	}
 	
 	//MAIN LOOP HERE
-	int bufSize = 256;
+	int bufSize = 1024;
 	char buffer[bufSize];
-	int nBytesRead;
+	int nBytesRead, nBytesWritten;
+	string toSend;
 	while(ssh_channel_is_open(channel) && !ssh_channel_is_eof(channel)){
 		nBytesRead = ssh_channel_read_timeout(channel, buffer, bufSize, 0, -1);
 		if(nBytesRead < 0){
@@ -190,8 +211,43 @@ int main(const int argc, const char* const argv[]){
 		}
 		if(nBytesRead > 0){
 			//Display to terminal
-			write(1, buffer, nBytesRead);
+			//write(1, buffer, nBytesRead);
 			logg.debug("SSH Read", buffer);
+		}
+		
+		//Get input
+		string inputStr;
+		getline(cin, inputStr);
+		
+		size_t spaceIndex = inputStr.find_first_of(" ");
+		string command = inputStr.substr(0, spaceIndex);
+		
+		if(command == "add"){
+			//Get info from user
+			string newUser, newPass;
+			cout << "Enter website: " << endl;
+			cout << "Enter new username: " << endl;
+			getline(cin, newUser);
+			cout << "Enter new password: (Leave blank for auto generation)" << endl;
+			getline(cin, newPass);
+			toSend = "add " + newUser + " " + newPass;
+			cout << toSend;
+			
+			//Send to omega
+			nBytesWritten = ssh_channel_write(channel, toSend.c_str(), toSend.size()); //test this
+			if(nBytesWritten != toSend.size()){
+				logg.error("SSH Write", "Mismatch in bytes to send and bytes sent. Continuing anyways.");
+			}
+		}else if(command == "get"){
+			
+		}else if(command == "exit"){
+			ssh_channel_close(channel);
+			ssh_channel_send_eof(channel);
+			ssh_channel_free(channel);
+			
+			ssh_disconnect(omega_ssh);
+			ssh_free(omega_ssh);
+			return -1;
 		}
 	}
 	
