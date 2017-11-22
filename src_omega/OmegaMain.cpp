@@ -126,17 +126,17 @@ vector<string> split(string str, string sep){
 
 tuple<string, string, bool> search(string filename, string website){
   ifstream in(filename);
-  vector<string> listFilesMax;
+  vector<string> list;
   string str = "";
   string user = "";
   string pass = "";
   bool err = true;
 
   while (getline(in, str)){
-    listFilesMax = split(str, " ");
-    if (listFilesMax[0] == website){
-      user = listFilesMax[1];
-      pass = listFilesMax[2];
+    list = split(str, " ");
+    if (list[0] == website){
+      user = list[1];
+      pass = list[2];
       err = false;
       break;
     }
@@ -173,46 +173,69 @@ int main(const int argc, const char* const argv[]){
 	//MAIN PROGRAM LOOP
 	bool exit = false;
 	while(!exit){
-		//Get input, then process, and execute command
-		string inputStr;
-		getline(cin, inputStr);
+    string inputStr;
+    getline(cin, inputStr);
 
-		string filename = "9d0bnLHA7HWB.txt";
-		string website = "github.com";
-		
-		size_t spaceIndex = inputStr.find_first_of(" ");
-		string command = inputStr.substr(0, spaceIndex);
-		
-		logg.debug("Main", "Command entered: " + command);
-		
-		if(command == "request"){
-		  string user = "";
-		  string pass = "";
-		  bool err = true;
+    string filename;
+    string website = "github.com";
 
-		  decrypt(filename);
-		  tie(user, pass, err) = search(filename, website);
+    vector<string> input = split(inputStr, " ");
 
-		  if (!err){
-		  	// send credentials to hostMain
-		  }
+    string command = input[0];
 
-		  encrypt(filename);
+    logg.debug("Main", "Command entered: " + command);
+    
+    if(command == "request"){
+      filename = "9d0bnLHA7HWB.txt";
+      string user = "";
+      string pass = "";
+      bool err = true;
 
-		}else if(command == "add"){
-			decrypt(filename);
-			// append credentials in the form of "url user pass" to end of file
-			encrypt(filename);
-		}else if(command == "getsettings"){
+      website = input[1];
+
+      decrypt(filename);
+      tie(user, pass, err) = search(filename, website);
+
+      if (!err){
+        // send credentials to hostMain
+      }
+
+      encrypt(filename);
+
+    }
+    else if(command == "add"){
+      filename = "9d0bnLHA7HWB.txt";
+      website = input[1];
+      string user = input[2];
+      string pass = input[3];
+
+      decrypt(filename);
+
+      ofstream file;
+
+      file.open(filename, ios::app);
+      string outputString = website + " " + user + " " + pass; 
+      file << outputString << endl;
+
+      file.close();
+
+      encrypt(filename);
+
+		}
+    else if(command == "getsettings"){
 			
-		}else if(command == "setsettings"){
+		}
+    else if(command == "setsettings"){
 			
-		}else if(command == "exit"){
+		}
+    else if(command == "exit"){
 			logg.info("Main", "Exiting program...");
 			exit = true;
-		}else if(command == "help"){
+		}
+    else if(command == "help"){
 			
-		}else{
+		}
+    else{
 			cout << "Invalid command" << endl;
 			//printHelp();
 		}
