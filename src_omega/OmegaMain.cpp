@@ -177,7 +177,7 @@ int main(const int argc, const char* const argv[]){
     getline(cin, inputStr);
 
     string filename;
-    string website = "github.com";
+    string website;
 
     vector<string> input = split(inputStr, " ");
 
@@ -198,6 +198,7 @@ int main(const int argc, const char* const argv[]){
 
       if (!err){
         // send credentials to hostMain
+        cout << "%%" << user << " " << pass << "$$" << endl;
       }
 
       encrypt(filename);
