@@ -8,10 +8,15 @@ using namespace std;
 Logger::Logger(string log_location, int level){
 	log_level = level;
 	log_stream.open(log_location, ios_base::app);
+	//check if open
+	if(!log_stream.is_open()){
+		throw -1;
+	}
 }
 
 Logger::~Logger(){
 	log_stream.close();
+	log_level = -1; //object deleted marker
 }
 
 string Logger::get_current_timestamp(){

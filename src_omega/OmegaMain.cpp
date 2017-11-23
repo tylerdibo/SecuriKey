@@ -146,7 +146,12 @@ tuple<string, string, bool> search(string filename, string website){
 }
 
 int main(const int argc, const char* const argv[]){
-	Logger logg("omega_log.txt", LOGGING_LEVEL); //Initialize log file
+	try{
+		Logger logg("omega_log.txt", LOGGING_LEVEL); //Initialize log file
+	}catch(int e){
+		cerr << "Logfile failed to initialize. Exiting..." << endl;
+		return -1;
+	}
 	logg.info("Main", "Program Started");
 	
 	if(argc < 2){
