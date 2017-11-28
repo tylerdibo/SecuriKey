@@ -159,16 +159,13 @@ int main(const int argc, const char* const argv[]){
 		logg.error("Main", "No MAC address provided");
 		return -1;
 	}
+
+  bool exit = false;
+
 	if(!checkMACAddress(argv[1])){
 		logg.warning("Main", "MAC address not permitted");
-		//promptForPasscode(); + ask if public computer
-		cout << "Enter passcode to gain access anyways: ";
-		string inputPass;
-		getline(cin, inputPass);
-		//hash the input
-		if(true){ //compare hash to stored passcode
-			
-		}
+    logg.info("Main", "Exiting program...");
+    exit = true;
 	}else{
 		cout << "Match found" << endl;
 	}
@@ -177,7 +174,6 @@ int main(const int argc, const char* const argv[]){
 	cout << "Enter command: " << endl;
 	
 	//MAIN PROGRAM LOOP
-	bool exit = false;
 	while(!exit){
     string inputStr;
     getline(cin, inputStr);
