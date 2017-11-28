@@ -8,6 +8,8 @@
 
 using namespace std;
 
+Logger logg;
+
 bool checkMACAddress(const char* currMAC){
 	const char* letterMAC = currMAC;
 	
@@ -146,12 +148,11 @@ tuple<string, string, bool> search(string filename, string website){
 }
 
 int main(const int argc, const char* const argv[]){
-	try{
-		Logger logg("omega_log.txt", LOGGING_LEVEL); //Initialize log file
-	}catch(int e){
+	if(logg.init("omega_log.txt", LOGGING_LEVEL) == -1){ //Initialize log file
 		cerr << "Logfile failed to initialize. Exiting..." << endl;
 		return -1;
 	}
+
 	logg.info("Main", "Program Started");
 	
 	if(argc < 2){

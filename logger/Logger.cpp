@@ -5,18 +5,27 @@
 
 using namespace std;
 
-Logger::Logger(string log_location, int level){
+Logger::Logger(){
+	initialized = false;
+}
+
+Logger::~Logger(){
+	if(initialized){
+		log_stream.close();
+	}
+	log_level = -1; //object deleted marker
+}
+
+int Logger::init(string log_location, int level){
+	initialized = true;
 	log_level = level;
 	log_stream.open(log_location, ios_base::app);
 	//check if open
 	if(!log_stream.is_open()){
-		throw -1;
+		return -1;
 	}
-}
-
-Logger::~Logger(){
-	log_stream.close();
-	log_level = -1; //object deleted marker
+	
+	return 0;
 }
 
 string Logger::get_current_timestamp(){

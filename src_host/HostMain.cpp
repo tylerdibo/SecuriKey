@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <string.h>
 #include "Logger.h"
 #define LIBSSH_STATIC 1
 #include "libssh/libssh.h"
@@ -14,7 +15,7 @@
 using namespace std;
 
 //Global variables
-Logger* logg;
+Logger logg;
 const int ssh_timeout = -1;
 
 std::string newUUID(){ //credit to: https://stackoverflow.com/questions/543306/platform-independent-guid-generation-in-c
@@ -75,16 +76,16 @@ bool sshVerifyOmega(ssh_session omega_sess){
 		case SSH_SERVER_KNOWN_OK:
 			break;
 		case SSH_SERVER_KNOWN_CHANGED:
-			logg->error("SSH Verification", "Server key has changed, someone may be attempting to tamper with the connection");
+			logg.error("SSH Verification", "Server key has changed, someone may be attempting to tamper with the connection");
 			return false;
 		case SSH_SERVER_FOUND_OTHER:
-			logg->error("SSH Verification", "Wrong type of key, someone may be attempting to tamper with the connection");
+			logg.error("SSH Verification", "Wrong type of key, someone may be attempting to tamper with the connection");
 			return false;
 		case SSH_SERVER_FILE_NOT_FOUND:
-			logg->warning("SSH Verification", "Known host file not found, creating file");
+			logg.warning("SSH Verification", "Known host file not found, creating file");
 			//continue to registering omega
 		case SSH_SERVER_NOT_KNOWN:
-			logg->info("SSH Verification", "Unknown server");
+			logg.info("SSH Verification", "Unknown server");
 			cout << "Unknown server. Do you want to connect anyways and register the server? (y/n)" << endl;
 			char answer;
 			do{
@@ -95,13 +96,13 @@ bool sshVerifyOmega(ssh_session omega_sess){
 			}
 			//Write to known hosts file
 			if(ssh_write_knownhost(omega_sess) < 0){
-				logg->error("SSH Verification", "Writing to known hosts file failed. Exiting...");
+				logg.error("SSH Verification", "Writing to known hosts file failed. Exiting...");
 				return false;
 			}
-			logg->info("SSH Verification", "New server registered");
+			logg.info("SSH Verification", "New server registered");
 			break;
 		case SSH_SERVER_ERROR:
-			logg->error("SSH Verification", "Unknown Error");
+			logg.error("SSH Verification", "Unknown Error");
 			return false;
 			break;
 	}
@@ -152,9 +153,7 @@ int addToClipboard(string toAdd){
 }
 
 int main(const int argc, const char* const argv[]){
-	try{
-		logg = new Logger("host_log.txt", LOGGING_LEVEL); //Initialize log file
-	}catch(int e){
+	if(logg.init("host_log.txt", LOGGING_LEVEL) == -1){ //Initialize log file
 		cerr << "Logfile failed to initialize. Exiting..." << endl;
 		return -1;
 	}
@@ -166,17 +165,17 @@ int main(const int argc, const char* const argv[]){
 			"/____/\\___/\\___/\\__,_/_/  /_/_/ |_\\___/\\__, /  \n" <<
 			"                                      /____/" << endl;
 	
-	logg->info("Main", "Program Started");
+	logg.info("Main", "Program Started");
 	
 	//Send raw UUID to omega, have omega hash it
 	string uuid = readUUID("UUID");
 	if(uuid == ""){
-		logg->warning("Main", "Could not read UUID from file, generating a new one...");
+		logg.warning("Main", "Could not read UUID from file, generating a new one...");
 		uuid = newUUID();
 		//save to disk
 		writeUUID("UUID", uuid);
 	}
-	logg->debug("Main", "UUID is " + uuid);
+	logg.debug("Main", "UUID is " + uuid);
 	//sendUUIDToOmega();
 	
 	//Initialize SSH session with omega
@@ -194,9 +193,9 @@ int main(const int argc, const char* const argv[]){
 	
 	rc = ssh_connect(omega_ssh);
 	if(rc != SSH_OK){
-		logg->warning("Main", "Could not connect to omega wirelessly. Attempting serial connection.");
+		logg.warning("Main", "Could not connect to omega wirelessly. Attempting serial connection.");
 		if(!connectSerial()){
-			logg->error("Main", "Could not connect to omega through serial. Exiting...");
+			logg.error("Main", "Could not connect to omega through serial. Exiting...");
 			return -1;
 		}
 	}
@@ -212,7 +211,7 @@ int main(const int argc, const char* const argv[]){
 	//Authenticate host
 	rc = ssh_userauth_password(omega_ssh, "root", "onioneer"); //Change to custom user account
 	if(rc != SSH_AUTH_SUCCESS){
-		logg->error("Main", "Error authenticating with password. Exiting...");
+		logg.error("Main", "Error authenticating with password. Exiting...");
 		ssh_disconnect(omega_ssh);
 		ssh_free(omega_ssh);
 		return -1;
@@ -221,7 +220,7 @@ int main(const int argc, const char* const argv[]){
 	//Initialize SSH channel
 	ssh_channel channel = ssh_channel_new(omega_ssh);
 	if(channel == NULL){
-		logg->error("Main", "Could not open SSH channel. Exiting...");
+		logg.error("Main", "Could not open SSH channel. Exiting...");
 		return -1;
 	}
 	
@@ -229,24 +228,24 @@ int main(const int argc, const char* const argv[]){
 	if(rc != SSH_OK){
 		//cerr << ssh_get_error(omega_ssh);
 		ssh_channel_free(channel);
-		logg->error("Main", "Could not open SSH session. Exiting...");
+		logg.error("Main", "Could not open SSH session. Exiting...");
 		return -1;
 	}
 	
 	//Initialize shell
 	rc = ssh_channel_request_pty(channel); //Not needed for non-interactive shell
 	/*if (rc != SSH_OK){
-		logg->error("Main", "Error opening remote shell [0]. Exiting...");
+		logg.error("Main", "Error opening remote shell [0]. Exiting...");
 		return -1;
 	}
 	rc = ssh_channel_change_pty_size(channel, 80, 24);
 	if (rc != SSH_OK){
-		logg->error("Main", "Error opening remote shell [1]. Exiting...");
+		logg.error("Main", "Error opening remote shell [1]. Exiting...");
 		return -1;
 	}*/
 	rc = ssh_channel_request_shell(channel);
 	if (rc != SSH_OK){
-		logg->error("Main", "Error opening remote shell [2]. Exiting...");
+		logg.error("Main", "Error opening remote shell [2]. Exiting...");
 		return -1;
 	}
 	
@@ -259,13 +258,13 @@ int main(const int argc, const char* const argv[]){
 		//Read initial input
 		nBytesRead = ssh_channel_read_timeout(channel, buffer, bufSize, 0, ssh_timeout);
 		if(nBytesRead < 0){
-			logg->error("Main", "Error reading bytes from ssh. Exiting...");
+			logg.error("Main", "Error reading bytes from ssh. Exiting...");
 			return -1;
 		}
 		if(nBytesRead > 0){
 			//Display to terminal
 			//write(1, buffer, nBytesRead);
-			logg->debug("SSH Read", buffer);
+			logg.debug("SSH Read", buffer);
 		}
 		
 		//Get input
@@ -285,23 +284,23 @@ int main(const int argc, const char* const argv[]){
 			cout << "Enter new password: (Leave blank for auto generation)" << endl;
 			getline(cin, newPass);
 			toSend = "add " + newWebsite + " " + newUser + " " + newPass;
-			logg->debug("SSH Write", "Sending: " + toSend);
+			logg.debug("SSH Write", "Sending: " + toSend);
 			
 			//Send to omega
 			nBytesWritten = ssh_channel_write(channel, toSend.c_str(), toSend.size()); //TODO: test this
 			if(nBytesWritten != (int)toSend.size()){
-				logg->error("Add", "Mismatch in bytes to send and bytes sent. Continuing anyways.");
+				logg.error("Add", "Mismatch in bytes to send and bytes sent. Continuing anyways.");
 			}
 			
 			//Receive confirmation
 			nBytesRead = ssh_channel_read_timeout(channel, buffer, bufSize, 0, ssh_timeout);
 			if(nBytesRead < 0){
-				logg->error("Add", "Error reading bytes from ssh. Exiting...");
+				logg.error("Add", "Error reading bytes from ssh. Exiting...");
 				return -1;
 			}
 			string confirmation = parseOmegaInput(buffer, nBytesRead);
 			if(confirmation != "Add successful"){
-				logg->warning("Add", "No confirmation received from omega. Continuing anyways.");
+				logg.warning("Add", "No confirmation received from omega. Continuing anyways.");
 			}
 		}else if(command == "get"){
 			//Get info from user
@@ -310,18 +309,18 @@ int main(const int argc, const char* const argv[]){
 			getline(cin, website);
 			
 			toSend = "request " + website;
-			logg->debug("SSH Write", "Sending: " + toSend);
+			logg.debug("SSH Write", "Sending: " + toSend);
 			
 			//Send to omega
 			nBytesWritten = ssh_channel_write(channel, toSend.c_str(), toSend.size()); //TODO: test this
 			if(nBytesWritten != (int)toSend.size()){
-				logg->error("Get", "Mismatch in bytes to send and bytes sent. Continuing anyways.");
+				logg.error("Get", "Mismatch in bytes to send and bytes sent. Continuing anyways.");
 			}
 			
 			//receive username + password, or list of usernames
 			nBytesRead = ssh_channel_read_timeout(channel, buffer, bufSize, 0, ssh_timeout);
 			if(nBytesRead < 0){
-				logg->error("Get", "Error reading bytes from ssh. Exiting...");
+				logg.error("Get", "Error reading bytes from ssh. Exiting...");
 				return -1;
 			}
 			string returned = parseOmegaInput(buffer, nBytesRead);
@@ -358,13 +357,13 @@ int main(const int argc, const char* const argv[]){
 					toSend = "request " + website + " " + returnedVals.at(numSelect-1);
 					nBytesWritten = ssh_channel_write(channel, toSend.c_str(), toSend.size()); //TODO: test this
 					if(nBytesWritten != (int)toSend.size()){
-						logg->error("Get", "Mismatch in bytes to send and bytes sent. Continuing anyways.");
+						logg.error("Get", "Mismatch in bytes to send and bytes sent. Continuing anyways.");
 					}
 					
 					//receive username and password
 					nBytesRead = ssh_channel_read_timeout(channel, buffer, bufSize, 0, ssh_timeout);
 					if(nBytesRead < 0){
-						logg->error("Get", "Error reading bytes from ssh. Exiting...");
+						logg.error("Get", "Error reading bytes from ssh. Exiting...");
 						return -1;
 					}
 					string userpass = parseOmegaInput(buffer, nBytesRead);
@@ -395,8 +394,6 @@ int main(const int argc, const char* const argv[]){
 			ssh_disconnect(omega_ssh);
 			ssh_free(omega_ssh);
 			
-			delete logg;
-			
 			return 0;
 		}
 	}
@@ -408,8 +405,6 @@ int main(const int argc, const char* const argv[]){
 	
 	ssh_disconnect(omega_ssh);
 	ssh_free(omega_ssh);
-	
-	delete logg;
 	
 	return 0;
 }
