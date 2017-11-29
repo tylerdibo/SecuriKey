@@ -10,6 +10,11 @@ using namespace std;
 
 Logger logg;
 
+struct Credentials {
+  vector<vector<string>> credentials;
+  bool notFound;
+};
+
 bool checkMACAddress(const char* currMAC){
 	const char* letterMAC = currMAC;
 	
@@ -126,24 +131,54 @@ vector<string> split(string str, string sep){
     return arr;
 }
 
-tuple<string, string, bool> search(string filename, string website){
+Credentials search(string filename, string website){
   ifstream in(filename);
+  vector<vector<string>> credentials;
   vector<string> list;
+  vector<string> credential;
   string str = "";
   string user = "";
   string pass = "";
   bool notFound = true;
 
-  while (getline(in, str) && notFound){
+  while (getline(in, str)){
     list = split(str, " ");
     if (list[0] == website){
       user = list[1];
       pass = list[2];
+
+      credential.push_back(user);
+      credential.push_back(pass);
+
+      credentials.push_back(credential);
+      credential.clear();
+
       notFound = false;
     }
   }
 
-  return make_tuple(user, pass, notFound);
+  Credentials cred;
+  cred.credentials = credentials;
+  cred.notFound = notFound;
+
+  return cred;
+}
+
+string search(string filename, string website, string user){
+  ifstream in(filename);
+  vector<string> list;
+  string str = "";
+  string pass = "";
+
+  while (getline(in, str)){
+    list = split(str, " ");
+    // cout << list[0] << endl;
+    if (list[0] == website && list[1] == user){
+      pass = list[2];
+    }
+  }
+
+  return pass;
 }
 
 int main(const int argc, const char* const argv[]){
@@ -168,7 +203,7 @@ int main(const int argc, const char* const argv[]){
 	}else{
 		cout << "Match found" << endl;
 	}
-	//logg.info("Main", "MAC address: " + argv[1]);
+	logg.info("Main", "MAC address: " + argv[1]);
 	
 	cout << "Enter command: " << endl;
 	
@@ -179,6 +214,7 @@ int main(const int argc, const char* const argv[]){
 
     string filename;
     string website;
+    string command = "";
 
     vector<string> input = split(inputStr, " ");
 
@@ -188,7 +224,7 @@ int main(const int argc, const char* const argv[]){
       logg.error("Main", "Insufficient number of arguments");
       return -1;
     } else {
-      string command = input[0];
+      command = input[0];
       logg.debug("Main", "Command entered: " + command);
     }
 
@@ -199,6 +235,7 @@ int main(const int argc, const char* const argv[]){
         return -1;
       }
 
+      Credentials cred;
       filename = "9d0bnLHA7HWB.txt";
       string user = "";
       string pass = "";
@@ -207,15 +244,35 @@ int main(const int argc, const char* const argv[]){
       website = input[1];
 
       decrypt(filename);
-      tie(user, pass, err) = search(filename, website);
 
-      if (!err){
-        // send credentials to hostMain
-        cout << "%%" << user << " " << pass << "$$" << endl;
+      if (size == 2){ // username not provided
+        cred = search(filename, website);
+
+        if (!cred.notFound){
+          // send credentials to hostMain
+          for(int i = 0; i < cred.credentials.size(); i++){
+            user = cred.credentials[i][0];
+            cout << "%%" << user << "$$" << endl;
+          }
+        }
+        else {
+          logg.info("Main", "No credentials found for specified website");
+        }
       }
+      else if (size == 3){ // username provided
+        user = input[2];
+        pass = search(filename, website, user);
 
+        if (pass != ""){
+          // send credentials to hostMain
+          cout << "%%" << user << " " << pass << "$$" << endl;
+        }
+        else {
+          logg.info("Main", "No credentials found for specified user and website");
+        }
+      }
+      
       encrypt(filename);
-
     }
     else if(command == "add"){
 
