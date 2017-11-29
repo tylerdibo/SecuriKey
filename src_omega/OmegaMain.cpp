@@ -132,19 +132,18 @@ tuple<string, string, bool> search(string filename, string website){
   string str = "";
   string user = "";
   string pass = "";
-  bool err = true;
+  bool notFound = true;
 
-  while (getline(in, str)){
+  while (getline(in, str) && notFound){
     list = split(str, " ");
     if (list[0] == website){
       user = list[1];
       pass = list[2];
-      err = false;
-      break;
+      notFound = false;
     }
   }
 
-  return make_tuple(user, pass, err);
+  return make_tuple(user, pass, notFound);
 }
 
 int main(const int argc, const char* const argv[]){
@@ -183,11 +182,23 @@ int main(const int argc, const char* const argv[]){
 
     vector<string> input = split(inputStr, " ");
 
-    string command = input[0];
+    int size = static_cast<int>(input.size());
 
-    logg.debug("Main", "Command entered: " + command);
-    
+    if (size < 1){
+      logg.error("Main", "Insufficient number of arguments");
+      return -1;
+    } else {
+      string command = input[0];
+      logg.debug("Main", "Command entered: " + command);
+    }
+
     if(command == "request"){
+
+      if (size < 2){
+        logg.error("Main", "Insufficient number of arguments");
+        return -1;
+      }
+
       filename = "9d0bnLHA7HWB.txt";
       string user = "";
       string pass = "";
@@ -207,6 +218,12 @@ int main(const int argc, const char* const argv[]){
 
     }
     else if(command == "add"){
+
+      if (size < 4){
+        logg.error("Main", "Insufficient number of arguments");
+        return -1;
+      }
+
       filename = "9d0bnLHA7HWB.txt";
       website = input[1];
       string user = input[2];
@@ -236,11 +253,10 @@ int main(const int argc, const char* const argv[]){
 			exit = true;
 		}
     else if(command == "help"){
-			
+			//printHelp();
 		}
     else{
-			cout << "Invalid command" << endl;
-			//printHelp();
+			logg.warning("Main", "Invalid command");
 		}
 	}
 	
