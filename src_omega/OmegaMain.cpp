@@ -250,10 +250,16 @@ int main(const int argc, const char* const argv[]){
 
         if (!cred.notFound){
           // send credentials to hostMain
+          string str = "%%";
           for(int i = 0; i < cred.credentials.size(); i++){
+            if (i != 0){
+              str += " ";
+            }
             user = cred.credentials[i][0];
-            cout << "%%" << user << "$$" << endl;
+            str += user;
           }
+          str += "$$";
+          cout << str << endl;
         }
         else {
           logg.info("Main", "No credentials found for specified website");
