@@ -203,7 +203,7 @@ int main(const int argc, const char* const argv[]){
 	}else{
 		cout << "Match found" << endl;
 	}
-	logg.info("Main", "MAC address: " + argv[1]);
+	logg.info("Main", "MAC address: " + string(argv[1]));
 	
 	cout << "Enter command: " << endl;
 	

@@ -1,4 +1,4 @@
-OBJS = OmegaMain.obj ../logger/Logger.obj
+OBJS = OmegaMain.obj ../logger/Logger.obj Settings.obj
 CXX = g++
 DEBUG = -g
 CXXFLAGS = -Wall -c $(DEBUG)
@@ -24,10 +24,13 @@ endif
 OmegaMain : $(OBJS)
 	$(CXX) $(LFLAGS) $(OBJS) $(LIBRARIES) -o ../bin/OmegaMain
 
-../logger/Logger.obj : ../logger/Logger.cpp
+../logger/Logger.obj : ../logger/Logger.cpp ../logger/Logger.h
 	$(CXX) $(CFLAGS) -I$(INCLUDES) ../logger/Logger.cpp -o ../logger/Logger.obj
 
-OmegaMain.obj : OmegaMain.cpp ../logger/Logger.obj
+Settings.obj : Settings.cpp Settings.h
+	$(CXX) $(CFLAGS) -I$(INCLUDES) Settings.cpp -o Settings.obj
+
+OmegaMain.obj : OmegaMain.cpp ../logger/Logger.obj Settings.obj
 	$(CXX) $(CFLAGS) -I$(INCLUDES) -DLOGGING_LEVEL=$(LOGLVL) OmegaMain.cpp -o OmegaMain.obj
 
 clean:

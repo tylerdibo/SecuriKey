@@ -4,19 +4,22 @@
 #include <chrono>
 #include <string>
 
+using namespace std;
+
 class Settings{
 private:
 	int startTime;
-	int endtime;
-	vector<string> wifiNetworks();
+	int endTime;
+	vector<string> wifiNetworks;
 
 public:
+	Settings();
 	int getStartTime();
 	int getEndTime();
 	string getWifiNetworks();
-	int setTime();
+	void setTime(int begin, int end);
 	string addWifi(string wifi);
 	string removeWifi(string wifi);
-	};
+};
 
 #endif /* __SETTINGS_H */

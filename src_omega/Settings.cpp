@@ -23,19 +23,19 @@ string Settings::getWifiNetworks(){
 	}
 }
 
-int Settings::setTime(int begin, int end){
-	begin = getStartTime();
-	end = getEndTime();
-	return begin,end;
+void Settings::setTime(int begin, int end){
+	startTime = begin;
+	endTime = end;
 }
 
 string Settings::addWifi(string wifi){
-	wifiNetworks.add(wifi);
+	wifiNetworks.push_back(wifi);
 }
 
 string Settings::removeWifi(string wifi){
-	for(unsigned int i = 0; i < wifiNetworks.size(); i++){
-		if(wifiNetworks.at(i) == wifi){
+	for(vector<string>::iterator i = wifiNetworks.begin(); i != wifiNetworks.end(); i++){
+		if(*i == wifi){
 			wifiNetworks.erase(i);
 		}
 	}
+}
