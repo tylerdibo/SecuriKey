@@ -1,10 +1,7 @@
-ifndef LOGLVL
-$(error LOGLVL is not set)
-endif
+export LOGLVL ?= 2
 
 all:
 	+$(MAKE) -C logger
-	+$(MAKE) -C src_omega
 	+$(MAKE) -C src_host
 
 clean:

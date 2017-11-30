@@ -1,9 +1,11 @@
-OBJS = OmegaMain.o ../logger/Logger.o
-CC = g++
+OBJS = OmegaMain.obj ../logger/Logger.obj Settings.obj
+CXX = g++
 DEBUG = -g
-CFLAGS = -Wall -c $(DEBUG)
+CXXFLAGS = -Wall -c $(DEBUG)
 LFLAGS = -Wall $(DEBUG)
 INCLUDES = ../logger
+
+LOGLVL ?= 4
 
 ifeq ($(OS),Windows_NT)
 	detected_OS := Windows
@@ -20,11 +22,16 @@ else
 endif
 
 OmegaMain : $(OBJS)
-	$(CC) $(LFLAGS) $(OBJS) $(LIBRARIES) -o ../bin/OmegaMain
+	$(CXX) $(LFLAGS) $(OBJS) $(LIBRARIES) -o ../bin/OmegaMain
 
-OmegaMain.o : OmegaMain.cpp
-	$(CC) $(CFLAGS) -I$(INCLUDES) -DLOGGING_LEVEL=$(LOGLVL) OmegaMain.cpp
-	#TODO: make LOGGING_LEVEL able to be modified when compiling
+../logger/Logger.obj : ../logger/Logger.cpp ../logger/Logger.h
+	$(CXX) $(CFLAGS) -I$(INCLUDES) ../logger/Logger.cpp -o ../logger/Logger.obj
+
+Settings.obj : Settings.cpp Settings.h
+	$(CXX) $(CFLAGS) -I$(INCLUDES) Settings.cpp -o Settings.obj
+
+OmegaMain.obj : OmegaMain.cpp ../logger/Logger.obj Settings.obj
+	$(CXX) $(CFLAGS) -I$(INCLUDES) -DLOGGING_LEVEL=$(LOGLVL) OmegaMain.cpp -o OmegaMain.obj
 
 clean:
 	\rm $(TODELETE)

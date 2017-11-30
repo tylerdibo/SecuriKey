@@ -1,6 +1,7 @@
 *.exe
 *.txt
 *.o
+*.obj
 bin/HostMain
 bin/OmegaMain
 test.cpp

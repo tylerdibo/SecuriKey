@@ -14,13 +14,15 @@ using namespace std;
 
 class Logger{
 private:
+	bool initialized;
 	ofstream log_stream;
 	int log_level; //critical = 0, error = 1, warning = 2, info = 3, debug = 4
 	string get_current_timestamp();
 	
 public:
-	Logger(string log_location, int level);
+	Logger();
 	~Logger();
+	int init(string log_location, int level);
 	bool error(string tag, string message);
 	bool warning(string tag, string message);
 	bool info(string tag, string message);

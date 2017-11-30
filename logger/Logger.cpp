@@ -5,13 +5,27 @@
 
 using namespace std;
 
-Logger::Logger(string log_location, int level){
-	log_level = level;
-	log_stream.open(log_location, ios_base::app);
+Logger::Logger(){
+	initialized = false;
 }
 
 Logger::~Logger(){
-	log_stream.close();
+	if(initialized){
+		log_stream.close();
+	}
+	log_level = -1; //object deleted marker
+}
+
+int Logger::init(string log_location, int level){
+	initialized = true;
+	log_level = level;
+	log_stream.open(log_location, ios_base::app);
+	//check if open
+	if(!log_stream.is_open()){
+		return -1;
+	}
+	
+	return 0;
 }
 
 string Logger::get_current_timestamp(){
@@ -24,7 +38,7 @@ string Logger::get_current_timestamp(){
 
 bool Logger::error(string tag, string message){
 	if(log_level >= LEVEL_ERROR){
-		cout << get_current_timestamp() << ": ERROR: " << tag << ": " << message << endl;
+		cerr << get_current_timestamp() << ": ERROR: " << tag << ": " << message << endl;
 	}
 	log_stream << get_current_timestamp() << ": ERROR: " << tag << ": " << message << endl;
 	return (log_stream.bad());
