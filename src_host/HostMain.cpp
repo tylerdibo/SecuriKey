@@ -16,7 +16,7 @@ using namespace std;
 
 //Global variables
 Logger logg;
-const int ssh_timeout = -1;
+const int ssh_timeout = 15; //timeout read requests after 15 seconds
 
 std::string newUUID(){ //credit to: https://stackoverflow.com/questions/543306/platform-independent-guid-generation-in-c
 #ifdef WIN32
@@ -131,6 +131,26 @@ string parseOmegaInput(char* buffer, int nBytes){
 	
 	string output = bufStr.substr(start+2, end-start-2); //get string between %% and $$
 	return output;
+}
+
+vector<string> requestPassForUser(string website, string username, ssh_channel chan){
+	int bufSize = 512;
+	char buffer[bufSize];
+	//Send request to omega
+	string toSend = "request " + website + " " + username;
+	int nBytesWritten = ssh_channel_write(chan, toSend.c_str(), toSend.size()); //TODO: test this
+	if(nBytesWritten != (int)toSend.size()){
+		logg.error("Get", "Mismatch in bytes to send and bytes sent. Continuing anyways.");
+	}
+	
+	//receive username and password
+	int nBytesRead = ssh_channel_read_timeout(chan, buffer, bufSize, 0, ssh_timeout);
+	if(nBytesRead < 0){
+		logg.error("Get", "Error reading bytes from ssh. Exiting...");
+		return vector<string>();
+	}
+	string userpass = parseOmegaInput(buffer, nBytesRead);
+	return split(userpass, " ");
 }
 
 int addToClipboard(string toAdd){
@@ -267,6 +287,8 @@ int main(const int argc, const char* const argv[]){
 			logg.debug("SSH Read", buffer);
 		}
 		
+		cout << "Enter command: ";
+		
 		//Get input
 		string inputStr;
 		getline(cin, inputStr);
@@ -328,9 +350,10 @@ int main(const int argc, const char* const argv[]){
 			vector<string> returnedVals = split(returned, " ");
 			
 			//if just one username+password combo
-			if(returnedVals.size() == 2){
+			if(returnedVals.size() == 1){
 				string username = returnedVals.at(0);
-				string password = returnedVals.at(1);
+				vector<string> userpass = requestPassForUser(website, username, channel);
+				string password = userpass.at(1);
 				
 				addToClipboard(username);
 				//Wait for user to paste username
@@ -338,7 +361,7 @@ int main(const int argc, const char* const argv[]){
 				getline(cin, placeholder);
 				addToClipboard(password);
 				//Maybe clear the clipboard after a certain amount of time?
-			}else if(returnedVals.size() > 2){
+			}else if(returnedVals.size() > 1){
 				//prompt for user to input number to select username
 				cout << "Press the number for the desired username:" << endl;
 				for(unsigned int i = 0; i < returnedVals.size(); i++){
@@ -354,7 +377,7 @@ int main(const int argc, const char* const argv[]){
 				}else{
 					//continue
 					//Send request to omega
-					toSend = "request " + website + " " + returnedVals.at(numSelect-1);
+					/*toSend = "request " + website + " " + returnedVals.at(numSelect-1);
 					nBytesWritten = ssh_channel_write(channel, toSend.c_str(), toSend.size()); //TODO: test this
 					if(nBytesWritten != (int)toSend.size()){
 						logg.error("Get", "Mismatch in bytes to send and bytes sent. Continuing anyways.");
@@ -366,8 +389,8 @@ int main(const int argc, const char* const argv[]){
 						logg.error("Get", "Error reading bytes from ssh. Exiting...");
 						return -1;
 					}
-					string userpass = parseOmegaInput(buffer, nBytesRead);
-					vector<string> userpassVect = split(returned, " ");
+					string userpass = parseOmegaInput(buffer, nBytesRead);*/
+					vector<string> userpassVect = requestPassForUser(website, returnedVals.at(numSelect-1), channel);
 					
 					addToClipboard(userpassVect.at(0));
 					//Wait for user to paste username
@@ -376,6 +399,9 @@ int main(const int argc, const char* const argv[]){
 					addToClipboard(userpassVect.at(1));
 					//Maybe clear the clipboard after a certain amount of time?
 				}
+			}else{
+				logg.debug("Get", "No usernames returned from omega.");
+				cout << "No credentials found for specified website." << endl;
 			}
 		}else if(command == "help"){
 			//Display list of commands with their explanations
