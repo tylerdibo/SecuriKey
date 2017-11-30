@@ -2,6 +2,8 @@
 #include <fstream>
 #include <vector>
 #include <string.h>
+#include <chrono>
+#include <thread>
 #include "Logger.h"
 #define LIBSSH_STATIC 1
 #include "libssh/libssh.h"
@@ -10,6 +12,7 @@
 #include <Rpc.h>
 #else
 #include <uuid/uuid.h>
+#include <unistd.h>
 #endif
 
 using namespace std;
@@ -17,6 +20,14 @@ using namespace std;
 //Global variables
 Logger logg;
 const int ssh_timeout = 15; //timeout read requests after 15 seconds
+
+void waitFor(unsigned int millis){
+#ifdef WIN32
+	Sleep(millis);
+#else
+	usleep(millis*1000);
+#endif
+}
 
 std::string newUUID(){ //credit to: https://stackoverflow.com/questions/543306/platform-independent-guid-generation-in-c
 #ifdef WIN32
@@ -125,9 +136,14 @@ vector<string> split(string str, string sep){
 }
 
 string parseOmegaInput(char* buffer, int nBytes){
+	logg.debug("ParseOmegaInput", string(buffer, nBytes));
 	string bufStr(buffer, nBytes);
 	int start = bufStr.find("%%");
 	int end = bufStr.find("$$", start);
+	
+	if(start == -1 || end == -1){
+		return "";
+	}
 	
 	string output = bufStr.substr(start+2, end-start-2); //get string between %% and $$
 	return output;
@@ -137,11 +153,13 @@ vector<string> requestPassForUser(string website, string username, ssh_channel c
 	int bufSize = 512;
 	char buffer[bufSize];
 	//Send request to omega
-	string toSend = "request " + website + " " + username;
-	int nBytesWritten = ssh_channel_write(chan, toSend.c_str(), toSend.size()); //TODO: test this
+	string toSend = "request " + website + " " + username + "\n";
+	int nBytesWritten = ssh_channel_write(chan, toSend.c_str(), toSend.size());
 	if(nBytesWritten != (int)toSend.size()){
 		logg.error("Get", "Mismatch in bytes to send and bytes sent. Continuing anyways.");
 	}
+	
+	waitFor(500); //Wait for omega to output
 	
 	//receive username and password
 	int nBytesRead = ssh_channel_read_timeout(chan, buffer, bufSize, 0, ssh_timeout);
@@ -170,6 +188,17 @@ int addToClipboard(string toAdd){
 	#endif
 	
 	return 0;
+}
+
+void closeConnection(ssh_session session, ssh_channel channel){
+	if(ssh_channel_is_open(channel)){
+		ssh_channel_close(channel);
+		ssh_channel_send_eof(channel);
+		ssh_channel_free(channel);
+	}
+
+	ssh_disconnect(session);
+	ssh_free(session);
 }
 
 int main(const int argc, const char* const argv[]){
@@ -205,7 +234,7 @@ int main(const int argc, const char* const argv[]){
 		return -1;
 	}
 	
-	int verbosity = SSH_LOG_PACKET;
+	int verbosity = SSH_LOG_WARNING;
 	int port = 22;
 	ssh_options_set(omega_ssh, SSH_OPTIONS_HOST, "omega-A030.local");
 	ssh_options_set(omega_ssh, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
@@ -241,6 +270,8 @@ int main(const int argc, const char* const argv[]){
 	ssh_channel channel = ssh_channel_new(omega_ssh);
 	if(channel == NULL){
 		logg.error("Main", "Could not open SSH channel. Exiting...");
+		ssh_disconnect(omega_ssh);
+		ssh_free(omega_ssh);
 		return -1;
 	}
 	
@@ -248,26 +279,44 @@ int main(const int argc, const char* const argv[]){
 	if(rc != SSH_OK){
 		//cerr << ssh_get_error(omega_ssh);
 		ssh_channel_free(channel);
+		ssh_disconnect(omega_ssh);
+		ssh_free(omega_ssh);
 		logg.error("Main", "Could not open SSH session. Exiting...");
 		return -1;
 	}
 	
 	//Initialize shell
 	rc = ssh_channel_request_pty(channel); //Not needed for non-interactive shell
-	/*if (rc != SSH_OK){
+	if (rc != SSH_OK){
 		logg.error("Main", "Error opening remote shell [0]. Exiting...");
 		return -1;
 	}
-	rc = ssh_channel_change_pty_size(channel, 80, 24);
+	rc = ssh_channel_change_pty_size(channel, 160, 48);
 	if (rc != SSH_OK){
 		logg.error("Main", "Error opening remote shell [1]. Exiting...");
 		return -1;
-	}*/
+	}
 	rc = ssh_channel_request_shell(channel);
-	if (rc != SSH_OK){
+	if(rc != SSH_OK){
 		logg.error("Main", "Error opening remote shell [2]. Exiting...");
 		return -1;
 	}
+	
+	/*rc = ssh_channel_request_exec(channel, "/root/OmegaMain");
+	if(rc != SSH_OK){
+		logg.error("Main", "Could not execute command.");
+		closeConnection(omega_ssh, channel);
+		return -1;
+	}*/
+	string pathToProgram = "/root/OmegaMain test\n";
+	int nInitWritten = ssh_channel_write(channel, pathToProgram.c_str(), pathToProgram.size());
+	if(nInitWritten != (int)pathToProgram.size()){
+		logg.error("Add", "Mismatch in bytes to send and bytes sent. Continuing anyways.");
+	}
+	
+	logg.debug("Main", "Entering main loop");
+	
+	waitFor(2000); //Delay to let omega output
 	
 	//MAIN LOOP HERE
 	int bufSize = 1024;
@@ -279,12 +328,13 @@ int main(const int argc, const char* const argv[]){
 		nBytesRead = ssh_channel_read_timeout(channel, buffer, bufSize, 0, ssh_timeout);
 		if(nBytesRead < 0){
 			logg.error("Main", "Error reading bytes from ssh. Exiting...");
+			closeConnection(omega_ssh, channel);
 			return -1;
 		}
 		if(nBytesRead > 0){
 			//Display to terminal
 			//write(1, buffer, nBytesRead);
-			logg.debug("SSH Read", buffer);
+			logg.debug("SSH Read", string(buffer, nBytesRead));
 		}
 		
 		cout << "Enter command: ";
@@ -299,25 +349,29 @@ int main(const int argc, const char* const argv[]){
 		if(command == "add"){
 			//Get info from user
 			string newWebsite, newUser, newPass;
-			cout << "Enter website: " << endl;
+			cout << "Enter website: ";
 			getline(cin, newWebsite);
-			cout << "Enter new username: " << endl;
+			cout << "Enter new username: ";
 			getline(cin, newUser);
-			cout << "Enter new password: (Leave blank for auto generation)" << endl;
+			cout << "Enter new password: (Leave blank for auto generation) ";
 			getline(cin, newPass);
-			toSend = "add " + newWebsite + " " + newUser + " " + newPass;
+			//TODO: clear terminal after each command?
+			toSend = "add " + newWebsite + " " + newUser + " " + newPass + "\n";
 			logg.debug("SSH Write", "Sending: " + toSend);
 			
 			//Send to omega
-			nBytesWritten = ssh_channel_write(channel, toSend.c_str(), toSend.size()); //TODO: test this
+			nBytesWritten = ssh_channel_write(channel, toSend.c_str(), toSend.size());
 			if(nBytesWritten != (int)toSend.size()){
 				logg.error("Add", "Mismatch in bytes to send and bytes sent. Continuing anyways.");
 			}
+			
+			waitFor(300); //Wait for omega to output
 			
 			//Receive confirmation
 			nBytesRead = ssh_channel_read_timeout(channel, buffer, bufSize, 0, ssh_timeout);
 			if(nBytesRead < 0){
 				logg.error("Add", "Error reading bytes from ssh. Exiting...");
+				closeConnection(omega_ssh, channel);
 				return -1;
 			}
 			string confirmation = parseOmegaInput(buffer, nBytesRead);
@@ -327,22 +381,25 @@ int main(const int argc, const char* const argv[]){
 		}else if(command == "get"){
 			//Get info from user
 			string website;
-			cout << "Enter website: " << endl;
+			cout << "Enter website: ";
 			getline(cin, website);
 			
-			toSend = "request " + website;
+			toSend = "request " + website + "\n";
 			logg.debug("SSH Write", "Sending: " + toSend);
 			
 			//Send to omega
-			nBytesWritten = ssh_channel_write(channel, toSend.c_str(), toSend.size()); //TODO: test this
+			nBytesWritten = ssh_channel_write(channel, toSend.c_str(), toSend.size());
 			if(nBytesWritten != (int)toSend.size()){
 				logg.error("Get", "Mismatch in bytes to send and bytes sent. Continuing anyways.");
 			}
+			
+			waitFor(500); //Wait for omega to output
 			
 			//receive username + password, or list of usernames
 			nBytesRead = ssh_channel_read_timeout(channel, buffer, bufSize, 0, ssh_timeout);
 			if(nBytesRead < 0){
 				logg.error("Get", "Error reading bytes from ssh. Exiting...");
+				closeConnection(omega_ssh, channel);
 				return -1;
 			}
 			string returned = parseOmegaInput(buffer, nBytesRead);
@@ -357,6 +414,7 @@ int main(const int argc, const char* const argv[]){
 				
 				addToClipboard(username);
 				//Wait for user to paste username
+				cout << "Username copied to clipboard. Press enter to copy password." << endl;
 				string placeholder;
 				getline(cin, placeholder);
 				addToClipboard(password);
@@ -374,29 +432,19 @@ int main(const int argc, const char* const argv[]){
 				
 				if(numSelect < 1 || numSelect > (int)returnedVals.size()){
 					//exit if statement
+					cout << "Invalid number" << endl;
 				}else{
 					//continue
 					//Send request to omega
-					/*toSend = "request " + website + " " + returnedVals.at(numSelect-1);
-					nBytesWritten = ssh_channel_write(channel, toSend.c_str(), toSend.size()); //TODO: test this
-					if(nBytesWritten != (int)toSend.size()){
-						logg.error("Get", "Mismatch in bytes to send and bytes sent. Continuing anyways.");
-					}
-					
-					//receive username and password
-					nBytesRead = ssh_channel_read_timeout(channel, buffer, bufSize, 0, ssh_timeout);
-					if(nBytesRead < 0){
-						logg.error("Get", "Error reading bytes from ssh. Exiting...");
-						return -1;
-					}
-					string userpass = parseOmegaInput(buffer, nBytesRead);*/
 					vector<string> userpassVect = requestPassForUser(website, returnedVals.at(numSelect-1), channel);
 					
 					addToClipboard(userpassVect.at(0));
 					//Wait for user to paste username
+					cout << "Username copied to clipboard. Press enter to copy password." << endl;
 					string placeholder;
 					getline(cin, placeholder);
 					addToClipboard(userpassVect.at(1));
+					cout << "Password copied." << endl;
 					//Maybe clear the clipboard after a certain amount of time?
 				}
 			}else{
@@ -413,24 +461,16 @@ int main(const int argc, const char* const argv[]){
 			cout << "exit:\tGracefully exit the program." << endl;
 		}else if(command == "exit"){
 			//Closing connections and freeing memory
-			ssh_channel_close(channel);
-			ssh_channel_send_eof(channel);
-			ssh_channel_free(channel);
-			
-			ssh_disconnect(omega_ssh);
-			ssh_free(omega_ssh);
+			closeConnection(omega_ssh, channel);
 			
 			return 0;
+		}else{
+			cout << "Invalid command. Try 'help' for a list of commands." << endl;
 		}
 	}
 	
 	//Closing connections and freeing memory
-	ssh_channel_close(channel);
-	ssh_channel_send_eof(channel);
-	ssh_channel_free(channel);
-	
-	ssh_disconnect(omega_ssh);
-	ssh_free(omega_ssh);
+	closeConnection(omega_ssh, channel);
 	
 	return 0;
 }
