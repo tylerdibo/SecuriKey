@@ -4,6 +4,9 @@
 #include <string>
 #include <string.h>
 #include <tuple>
+#include <stdio.h>
+#include <time.h>
+#include <iwlib.h>
 #include "Logger.h"
 
 using namespace std;
@@ -181,6 +184,44 @@ string search(string filename, string website, string user){
   return pass;
 }
 
+bool searchSSID(wireless_scan_head head, string SSID){
+  wireless_scan *result = head.result;
+  bool matchFound = false;
+  while (NULL != result && !matchFound) {
+    // cast result to string
+    string resultStr(result->b.essid);
+    if (resultStr == SSID){
+      matchFound = true;
+    }
+    result = result->next;
+  }
+
+  return matchFound;
+}
+
+int networkScan(string SSID){
+  wireless_scan_head head;
+  iwrange range;
+  int sock;
+
+  /* Open socket to kernel */
+  sock = iw_sockets_open();
+
+  /* Get some metadata to use for scanning */
+  if (iw_get_range_info(sock, "wlan0", &range) < 0) {
+    logg.error("networkScan", "Error during iw_get_range_info. Aborting.");
+    return -1;
+  }
+
+  /* Perform the scan */
+  if (iw_scan(sock, "wlan0", range.we_version_compiled, &head) < 0) {
+    logg.error("networkScan", "Error during iw_scan. Aborting.");
+    return -1;
+  }
+
+  return searchSSID(head, SSID);
+}
+
 int main(const int argc, const char* const argv[]){
 	if(logg.init("omega_log.txt", LOGGING_LEVEL) == -1){ //Initialize log file
 		cerr << "Logfile failed to initialize. Exiting..." << endl;
@@ -188,6 +229,11 @@ int main(const int argc, const char* const argv[]){
 	}
 
 	logg.info("Main", "Program Started");
+
+  if (networkScan < 1){
+    logg.error("Main", "Invalid password or error scanning. Aborting.")
+    return -1;
+  }
 	
 	if(argc < 2){
 		logg.error("Main", "No MAC address provided");
