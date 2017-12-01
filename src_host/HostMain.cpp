@@ -236,7 +236,8 @@ int main(const int argc, const char* const argv[]){
 	
 	int verbosity = SSH_LOG_WARNING;
 	int port = 22;
-	ssh_options_set(omega_ssh, SSH_OPTIONS_HOST, "omega-A030.local");
+	//ssh_options_set(omega_ssh, SSH_OPTIONS_HOST, "omega-A030.local");
+	ssh_options_set(omega_ssh, SSH_OPTIONS_HOST, "omega-9F6A.local");
 	ssh_options_set(omega_ssh, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
 	ssh_options_set(omega_ssh, SSH_OPTIONS_PORT, &port);
 	
@@ -355,7 +356,7 @@ int main(const int argc, const char* const argv[]){
 			getline(cin, newUser);
 			cout << "Enter new password: (Leave blank for auto generation) ";
 			getline(cin, newPass);
-			//TODO: clear terminal after each command?
+			
 			toSend = "add " + newWebsite + " " + newUser + " " + newPass + "\n";
 			logg.debug("SSH Write", "Sending: " + toSend);
 			
@@ -375,7 +376,7 @@ int main(const int argc, const char* const argv[]){
 				return -1;
 			}
 			string confirmation = parseOmegaInput(buffer, nBytesRead);
-			if(confirmation != "Add successful"){
+			if(confirmation != "Success"){
 				logg.warning("Add", "No confirmation received from omega. Continuing anyways.");
 			}
 		}else if(command == "get"){
@@ -428,7 +429,14 @@ int main(const int argc, const char* const argv[]){
 				
 				string selection;
 				getline(cin, selection);
-				int numSelect = stoi(selection); //TODO: catch error from inputting non-integer
+				int numSelect = -1;
+				try{
+					numSelect = stoi(selection);
+				}catch(...){
+					logg.info("Delete", "Invalid number");
+					cout << "Invalid number" << endl;
+					numSelect = -1;
+				}
 				
 				if(numSelect < 1 || numSelect > (int)returnedVals.size()){
 					//exit if statement
@@ -451,12 +459,90 @@ int main(const int argc, const char* const argv[]){
 				logg.debug("Get", "No usernames returned from omega.");
 				cout << "No credentials found for specified website." << endl;
 			}
+		}else if(command == "delete"){
+			//Get info from user
+			string website;
+			cout << "Enter website: ";
+			getline(cin, website);
+			
+			toSend = "request " + website + "\n";
+			logg.debug("SSH Write", "Sending: " + toSend);
+			
+			//Send to omega
+			nBytesWritten = ssh_channel_write(channel, toSend.c_str(), toSend.size());
+			if(nBytesWritten != (int)toSend.size()){
+				logg.error("Delete", "Mismatch in bytes to send and bytes sent. Continuing anyways.");
+			}
+			
+			waitFor(500); //Wait for omega to output
+			
+			//receive username + password, or list of usernames
+			nBytesRead = ssh_channel_read_timeout(channel, buffer, bufSize, 0, ssh_timeout);
+			if(nBytesRead < 0){
+				logg.error("Delete", "Error reading bytes from ssh. Exiting...");
+				closeConnection(omega_ssh, channel);
+				return -1;
+			}
+			string returnedUsers = parseOmegaInput(buffer, nBytesRead);
+			//parse input from omega
+			vector<string> users = split(returnedUsers, " ");
+			
+			if(users.size() > 0){
+				//prompt for user to input number to select username
+				cout << "Press the number for the desired username:" << endl;
+				for(unsigned int i = 0; i < users.size(); i++){
+					cout << i+1 << ": " << users.at(i) << endl;
+				}
+				
+				string selection;
+				getline(cin, selection);
+				int numSelect = -1;
+				try{
+					numSelect = stoi(selection);
+				}catch(...){
+					logg.info("Delete", "Invalid number");
+					cout << "Invalid number" << endl;
+					numSelect = -1;
+				}
+				
+				if(numSelect < 1 || numSelect > (int)users.size()){
+					//exit if statement
+					cout << "Invalid number" << endl;
+				}else{
+					//continue
+					//Send deletion request to omega
+					toSend = "delete " + website + " " + users.at(numSelect-1) + "\n";
+					nBytesWritten = ssh_channel_write(channel, toSend.c_str(), toSend.size());
+					if(nBytesWritten != (int)toSend.size()){
+						logg.error("Delete", "Mismatch in bytes to send and bytes sent. Continuing anyways.");
+					}
+					
+					waitFor(300);
+					
+					//Receive confirmation
+					nBytesRead = ssh_channel_read_timeout(channel, buffer, bufSize, 0, ssh_timeout);
+					if(nBytesRead < 0){
+						logg.error("Delete", "Error reading bytes from ssh. Exiting...");
+						closeConnection(omega_ssh, channel);
+						return -1;
+					}
+					string confirmation = parseOmegaInput(buffer, nBytesRead);
+					if(confirmation != "Success"){
+						logg.warning("Delete", "No confirmation received from omega. Continuing anyways.");
+					}
+				}
+			}else{
+				logg.debug("Get", "No usernames returned from omega.");
+				cout << "No credentials found for specified website." << endl;
+			}
+			
 		}else if(command == "help"){
 			//Display list of commands with their explanations
 			cout << "Available commands: " << endl << endl;
-			cout << "add:\tSend a new user account to the omega to be stored and encrypted." << endl;
-			cout << "get:\tRetrieve the user account from the omega for the given website." << endl;
+			cout << "add:\tSend a new user account to the key to be stored and encrypted." << endl;
+			cout << "get:\tRetrieve the user account from the key for the given website." << endl;
 			cout << "\tIf more than one user account exists for the website, a username must be selected." << endl;
+			cout << "delete:\tRemove a user account from the database." << endl;
 			cout << "help:\tDisplay this list of commands." << endl;
 			cout << "exit:\tGracefully exit the program." << endl;
 		}else if(command == "exit"){
