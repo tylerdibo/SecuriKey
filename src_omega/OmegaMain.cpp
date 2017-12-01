@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <iwlib.h>
+#include <stdlib.h>
 #include "Logger.h"
 
 using namespace std;
@@ -72,7 +73,6 @@ string encryptDecrypt(string toEncrypt) {
     
     for (int i = 0; i < toEncrypt.size(); i++)
         output[i] = toEncrypt[i] ^ key[i % (sizeof(key) / sizeof(char))];
-    
     return output;
 }
 
@@ -175,7 +175,6 @@ string search(string filename, string website, string user){
 
   while (getline(in, str)){
     list = split(str, " ");
-    // cout << list[0] << endl;
     if (list[0] == website && list[1] == user){
       pass = list[2];
     }
@@ -188,7 +187,6 @@ bool searchSSID(wireless_scan_head head, string SSID){
   wireless_scan *result = head.result;
   bool matchFound = false;
   while (NULL != result && !matchFound) {
-    // cast result to string
     string resultStr(result->b.essid);
     if (resultStr == SSID){
       matchFound = true;
@@ -221,6 +219,50 @@ int networkScan(string SSID){
   }
 
   return searchSSID(head, SSID);
+}
+
+bool deleteCredential(string filename, string website, string user){
+  bool isFound = false;
+
+  ifstream in(filename);
+  ofstream temp("temp.txt");
+  vector<string> list;
+  string str = "";
+
+  while (getline(in, str)){
+    list = split(str, " ");
+    if (!(list[0] == website && list[1] == user)){
+      temp << str << endl;
+    } else {
+      isFound = true;
+    }
+  }
+
+  temp.close();
+  in.close();
+
+  const char * p = filename.c_str();
+  remove(p);
+  rename("temp.txt", p);
+
+  return isFound;
+}
+
+string randomString(int length = 15, string charIndex = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"){
+    srand(time(NULL)); // uses internal clock to set seed for rand()
+    int indexesOfRandomChars[length];
+
+    for (int i = 0; i < length; ++i){
+        indexesOfRandomChars[i] = rand() % charIndex.length();
+    }
+
+    string randomString = "";
+
+    for (int i = 0; i < length; ++i){
+        randomString += charIndex[indexesOfRandomChars[i]];
+    }
+
+    return randomString;
 }
 
 int main(const int argc, const char* const argv[]){
@@ -331,7 +373,7 @@ int main(const int argc, const char* const argv[]){
     }
     else if(command == "add"){
 
-      if (size < 4){
+      if (size < 3){
         logg.error("Main", "Insufficient number of arguments");
         return -1;
       }
@@ -339,7 +381,14 @@ int main(const int argc, const char* const argv[]){
       filename = "9d0bnLHA7HWB.txt";
       website = input[1];
       string user = input[2];
-      string pass = input[3];
+      string pass = "";
+
+      if (size == 4){
+        pass = input[3];
+      }
+      else {
+        pass = randomString();
+      }
 
       decrypt(filename);
 
@@ -349,11 +398,26 @@ int main(const int argc, const char* const argv[]){
       string outputString = website + " " + user + " " + pass; 
       file << outputString << endl;
 
+      cout << "%%Success$$" << endl;
+
       file.close();
 
       encrypt(filename);
 
 		}
+    else if(command == "delete"){
+      filename = "9d0bnLHA7HWB.txt";
+      website = input[1];
+      string user = input[2];
+
+      if (deleteCredential("tmp.txt", input[0], input[1]) > 0){
+        cout << "%%Success$$" << endl;
+      }
+      else {
+        logg.info("Main", "No matching line found");
+        cout << "%%No matching line found$$" << endl;
+      }
+    }
     else if(command == "getsettings"){
 			
 		}
