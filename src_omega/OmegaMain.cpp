@@ -224,6 +224,8 @@ int networkScan(string SSID){
 bool deleteCredential(string filename, string website, string user){
   bool isFound = false;
 
+  decrypt(filename);
+
   ifstream in(filename);
   ofstream temp("temp.txt");
   vector<string> list;
@@ -244,6 +246,8 @@ bool deleteCredential(string filename, string website, string user){
   const char * p = filename.c_str();
   remove(p);
   rename("temp.txt", p);
+
+  encrypt(filename);
 
   return isFound;
 }
@@ -410,7 +414,7 @@ int main(const int argc, const char* const argv[]){
       website = input[1];
       string user = input[2];
 
-      if (deleteCredential("tmp.txt", input[0], input[1]) > 0){
+      if (deleteCredential(filename, website, user) > 0){
         cout << "%%Success$$" << endl;
       }
       else {
