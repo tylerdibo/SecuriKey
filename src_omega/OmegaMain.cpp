@@ -14,10 +14,10 @@ using namespace std;
 
 Logger logg;
 
-struct Credentials {
+/*struct Credentials {
   vector<vector<string>> credentials;
   bool notFound;
-};
+};*/
 
 bool checkMACAddress(const char* currMAC){
 	const char* letterMAC = currMAC;
@@ -134,7 +134,7 @@ vector<string> split(string str, string sep){
     return arr;
 }
 
-Credentials search(string filename, string website){
+/*Credentials search(string filename, string website){
   ifstream in(filename);
   vector<vector<string>> credentials;
   vector<string> list;
@@ -165,6 +165,32 @@ Credentials search(string filename, string website){
   cred.notFound = notFound;
 
   return cred;
+}*/
+
+vector<vector<string>> search(string filename, string website){
+  ifstream in(filename);
+  vector<vector<string>> credentials;
+  vector<string> list;
+  vector<string> credential;
+  string str = "";
+  string user = "";
+  string pass = "";
+
+  while (getline(in, str)){
+    list = split(str, " ");
+    if (list[0] == website){
+      user = list[1];
+      pass = list[2];
+
+      credential.push_back(user);
+      credential.push_back(pass);
+
+      credentials.push_back(credential);
+      credential.clear();
+    }
+  }
+
+  return credentials;
 }
 
 string search(string filename, string website, string user){
@@ -330,7 +356,8 @@ int main(const int argc, const char* const argv[]){
         return -1;
       }
 
-      Credentials cred;
+      // Credentials cred;
+      vector<vector<string>> cred;
       filename = "9d0bnLHA7HWB.txt";
       string user = "";
       string pass = "";
@@ -343,14 +370,14 @@ int main(const int argc, const char* const argv[]){
       if (size == 2){ // username not provided
         cred = search(filename, website);
 
-        if (!cred.notFound){
+        if (!cred.empty()){
           // send credentials to hostMain
           string str = "%%";
-          for(int i = 0; i < cred.credentials.size(); i++){
+          for(int i = 0; i < cred.size(); i++){
             if (i != 0){
               str += " ";
             }
-            user = cred.credentials[i][0];
+            user = cred[i][0];
             str += user;
           }
           str += "$$";
@@ -432,9 +459,9 @@ int main(const int argc, const char* const argv[]){
 			logg.info("Main", "Exiting program...");
 			exit = true;
 		}
-    else if(command == "help"){
+    /*else if(command == "help"){
 			//printHelp();
-		}
+		}*/
     else{
 			logg.warning("Main", "Invalid command");
 		}
