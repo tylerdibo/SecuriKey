@@ -29,7 +29,7 @@ void waitFor(unsigned int millis){
 #endif
 }
 
-std::string newUUID(){ //credit to: https://stackoverflow.com/questions/543306/platform-independent-guid-generation-in-c
+string newUUID(){ //credit to: https://stackoverflow.com/questions/543306/platform-independent-guid-generation-in-c
 #ifdef WIN32
     UUID uuid;
     UuidCreate(&uuid);
@@ -217,12 +217,13 @@ int main(const int argc, const char* const argv[]){
 	logg.info("Main", "Program Started");
 	
 	//Send raw UUID to omega, have omega hash it
-	string uuid = readUUID("UUID");
+	string uuidLocation = "UUID";
+	string uuid = readUUID(uuidLocation.c_str());
 	if(uuid == ""){
 		logg.warning("Main", "Could not read UUID from file, generating a new one...");
 		uuid = newUUID();
 		//save to disk
-		writeUUID("UUID", uuid);
+		writeUUID(uuidLocation.c_str(), uuid);
 	}
 	logg.debug("Main", "UUID is " + uuid);
 	//sendUUIDToOmega();
@@ -234,10 +235,10 @@ int main(const int argc, const char* const argv[]){
 		return -1;
 	}
 	
-	int verbosity = SSH_LOG_WARNING;
+	int verbosity = SSH_LOG_NOLOG;
 	int port = 22;
-	//ssh_options_set(omega_ssh, SSH_OPTIONS_HOST, "omega-A030.local");
-	ssh_options_set(omega_ssh, SSH_OPTIONS_HOST, "omega-9F6A.local");
+	ssh_options_set(omega_ssh, SSH_OPTIONS_HOST, "omega-A030.local");
+	//ssh_options_set(omega_ssh, SSH_OPTIONS_HOST, "omega-9F6A.local");
 	ssh_options_set(omega_ssh, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
 	ssh_options_set(omega_ssh, SSH_OPTIONS_PORT, &port);
 	
@@ -309,7 +310,7 @@ int main(const int argc, const char* const argv[]){
 		closeConnection(omega_ssh, channel);
 		return -1;
 	}*/
-	string pathToProgram = "/root/OmegaMain test\n";
+	string pathToProgram = "/root/OmegaMain " + uuid + "\n";
 	int nInitWritten = ssh_channel_write(channel, pathToProgram.c_str(), pathToProgram.size());
 	if(nInitWritten != (int)pathToProgram.size()){
 		logg.error("Add", "Mismatch in bytes to send and bytes sent. Continuing anyways.");
@@ -433,7 +434,7 @@ int main(const int argc, const char* const argv[]){
 				try{
 					numSelect = stoi(selection);
 				}catch(...){
-					logg.info("Delete", "Invalid number");
+					logg.info("Get", "Invalid number");
 					cout << "Invalid number" << endl;
 					numSelect = -1;
 				}
@@ -532,7 +533,7 @@ int main(const int argc, const char* const argv[]){
 					}
 				}
 			}else{
-				logg.debug("Get", "No usernames returned from omega.");
+				logg.debug("Delete", "No usernames returned from omega.");
 				cout << "No credentials found for specified website." << endl;
 			}
 			
