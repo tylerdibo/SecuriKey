@@ -303,12 +303,12 @@ int main(const int argc, const char* const argv[]){
 
 	logg.info("Main", "Program Started");
 
-  string SSID = "eduroam";
+  // string SSID = "eduroam";
 
-  if (networkScan(SSID) < 1){
-    logg.error("Main", "Invalid password or error scanning. Aborting.");
-    return -1;
-  }
+  // if (networkScan(SSID) < 1){
+  //   logg.error("Main", "Invalid password or error scanning. Aborting.");
+  //   return -1;
+  // }
 	
 	if(argc < 2){
 		logg.error("Main", "No MAC address provided");
@@ -323,10 +323,9 @@ int main(const int argc, const char* const argv[]){
     exit = true;
 	}else{
 		cout << "Match found" << endl;
+    cout << "Enter command: " << endl;
 	}
 	logg.info("Main", "MAC address: " + string(argv[1]));
-	
-	cout << "Enter command: " << endl;
 	
 	//MAIN PROGRAM LOOP
 	while(!exit){
