@@ -19,8 +19,8 @@ Logger logg;
   bool notFound;
 };*/
 
-bool checkMACAddress(const char* currMAC){
-	const char* letterMAC = currMAC;
+bool checkUUID(const char* currUUID){
+	const char* letterUUID = currUUID;
 	
 	ifstream mac_file;
 	mac_file.open("MAC_addresses");
@@ -44,16 +44,16 @@ bool checkMACAddress(const char* currMAC){
 				return -1;
 			}
 		}else{
-			letterMAC = currMAC;
+			letterUUID = currUUID;
 			bool different = false;
-			while(*lineChar != 0 && *letterMAC != 0 && !different){
-				if(*lineChar != *letterMAC){
+			while(*lineChar != 0 && *letterUUID != 0 && !different){
+				if(*lineChar != *letterUUID){
 					different = true;
 				}
 				lineChar++;
-				letterMAC++;
+				letterUUID++;
 			}
-			if(*letterMAC != 0 || *lineChar != 0){
+			if(*letterUUID != 0 || *lineChar != 0){
 				different = true;
 			}
 			if(!different){
@@ -311,21 +311,21 @@ int main(const int argc, const char* const argv[]){
   // }
 	
 	if(argc < 2){
-		logg.error("Main", "No MAC address provided");
+		logg.error("Main", "No UUID provided");
 		return -1;
 	}
 
   bool exit = false;
 
-	if(!checkMACAddress(argv[1])){
-		logg.warning("Main", "MAC address not permitted");
+	if(!checkUUID(argv[1])){
+		logg.warning("Main", "UUID not permitted");
     logg.info("Main", "Exiting program...");
     exit = true;
 	}else{
 		cout << "Match found" << endl;
     cout << "Enter command: " << endl;
 	}
-	logg.info("Main", "MAC address: " + string(argv[1]));
+	logg.info("Main", "UUID: " + string(argv[1]));
 	
 	//MAIN PROGRAM LOOP
 	while(!exit){
